@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RustCut</title>
+<style>
+:root{
+  --bg1:#dfe9ff;--bg2:#f3e4ff;--bg3:#ffe9e0;--text:#14161f;--sub:#555b70;
+  --glass:rgba(255,255,255,.45);--glass2:rgba(255,255,255,.65);--edge:rgba(255,255,255,.8);--hi:rgba(255,255,255,.95);
+  --shadow:rgba(40,50,100,.18);--accent:#4f7cff;--accent2:#b46bff;--clipov:rgba(79,124,255,.55);--clipsel:rgba(180,107,255,.55);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg1:#0c1230;--bg2:#241046;--bg3:#35122b;--text:#f2f4ff;--sub:#a7adc7;
+  --glass:rgba(255,255,255,.08);--glass2:rgba(255,255,255,.15);--edge:rgba(255,255,255,.2);--hi:rgba(255,255,255,.32);
+  --shadow:rgba(0,0,0,.5);--clipov:rgba(40,70,160,.6);--clipsel:rgba(150,80,220,.55);}}
+:root[data-theme="dark"]{
+  --bg1:#0c1230;--bg2:#241046;--bg3:#35122b;--text:#f2f4ff;--sub:#a7adc7;
+  --glass:rgba(255,255,255,.08);--glass2:rgba(255,255,255,.15);--edge:rgba(255,255,255,.2);--hi:rgba(255,255,255,.32);
+  --shadow:rgba(0,0,0,.5);--clipov:rgba(40,70,160,.6);--clipsel:rgba(150,80,220,.55);}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:"Segoe UI","Noto Sans Arabic",Tahoma,system-ui,sans-serif;color:var(--text);font-size:13px;
+  background:radial-gradient(60% 50% at 12% 8%,var(--accent) 0,transparent 60%),
+  radial-gradient(50% 50% at 92% 18%,var(--accent2) 0,transparent 60%),
+  radial-gradient(60% 60% at 70% 100%,#ff7a9c 0,transparent 60%),
+  linear-gradient(135deg,var(--bg1),var(--bg2) 55%,var(--bg3));
+  background-attachment:fixed;display:flex;flex-direction:column;gap:10px;padding:10px;overflow:hidden;user-select:none}
+.glass{background:var(--glass);backdrop-filter:blur(26px) saturate(190%);-webkit-backdrop-filter:blur(26px) saturate(190%);
+  border:1px solid var(--edge);border-radius:20px;box-shadow:inset 0 1px 0 var(--hi),0 12px 36px var(--shadow)}
+button,select,input,textarea{font:inherit;color:inherit}
+.btn{background:var(--glass2);border:1px solid var(--edge);border-radius:12px;padding:6px 12px;cursor:pointer;
+  box-shadow:inset 0 1px 0 var(--hi);transition:transform .12s,filter .12s;white-space:nowrap}
+.btn:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.btn:active{transform:scale(.96)}
+.btn:disabled{opacity:.4;pointer-events:none}
+.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent;color:#fff;font-weight:600}
+.field{background:var(--glass2);border:1px solid var(--edge);border-radius:10px;padding:5px 8px;outline:none}
+input[type=range]{accent-color:var(--accent);width:100%}
+#top{display:flex;align-items:center;gap:10px;padding:8px 14px;flex:none}
+#top .logo{font-weight:800;font-size:16px;margin-inline-end:auto;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+#main{display:flex;gap:10px;flex:1;min-height:0}
+#lib{width:310px;flex:none;display:flex;flex-direction:column;overflow:hidden}
+#tabs{display:flex;gap:4px;padding:8px}
+#tabs button{flex:1;padding:7px 4px;border-radius:10px;border:1px solid transparent;background:transparent;cursor:pointer}
+#tabs button.on{background:var(--glass2);border-color:var(--edge);box-shadow:inset 0 1px 0 var(--hi);font-weight:600}
+.pane{display:none;padding:10px;overflow:auto;flex:1;flex-direction:column;gap:10px}
+.pane.on{display:flex}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{background:var(--glass2);border:1px solid var(--edge);border-radius:12px;padding:10px 4px;text-align:center;cursor:pointer;
+  box-shadow:inset 0 1px 0 var(--hi);font-size:12px;transition:transform .12s}
+.tile:hover{transform:translateY(-2px)}
+.tile.on{outline:2px solid var(--accent2)}
+.tile span{display:block;font-size:20px;margin-bottom:4px}
+.card{display:flex;gap:8px;align-items:center;background:var(--glass2);border:1px solid var(--edge);border-radius:12px;padding:6px}
+.card img,.card .ph{width:64px;height:40px;object-fit:cover;border-radius:8px;background:rgba(0,0,0,.25);flex:none}
+.card .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hintp{color:var(--sub);font-size:12px;line-height:1.8}
+#stagewrap{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+#stage{position:absolute;inset:12px;display:flex;align-items:center;justify-content:center}
+#frame{position:relative;background:#000;border-radius:10px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.sv{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;display:none}
+#vig{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.7))}
+#mb{position:absolute;display:none;pointer-events:none;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+#mbx{position:absolute;display:none;border:2px dashed #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);cursor:move;touch-action:none}
+#mbx i{position:absolute;right:-7px;bottom:-7px;width:14px;height:14px;background:#fff;border-radius:50%;cursor:nwse-resize;box-shadow:0 0 6px rgba(0,0,0,.6)}
+#cap{position:absolute;left:0;right:0;transform:translateY(-50%);text-align:center;font-weight:700;white-space:pre-wrap;
+  pointer-events:none;padding:0 4%;line-height:1.25;text-shadow:0 0 3px #000,0 0 3px #000,0 0 6px #000,0 2px 8px rgba(0,0,0,.6)}
+#empty{position:absolute;text-align:center;color:var(--sub);line-height:2;z-index:2;pointer-events:none}
+#empty b{font-size:19px;color:var(--text)}
+#side{width:290px;flex:none;padding:14px;display:flex;flex-direction:column;gap:10px;overflow:auto}
+#side h3{margin:6px 0 0;font-size:12px;color:var(--sub);font-weight:600}
+.row{display:flex;flex-direction:column;gap:5px}
+.row.h{flex-direction:row;align-items:center;gap:8px}
+.row .field{width:100%}
+.val{color:var(--sub);font-size:11px}
+#tl{flex:none;height:224px;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+#tbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#time{font-variant-numeric:tabular-nums;direction:ltr;min-width:150px;text-align:center;color:var(--sub)}
+#scroll{flex:1;overflow-x:auto;overflow-y:hidden;direction:ltr;position:relative;border-radius:12px}
+#inner{position:relative;height:100%;cursor:crosshair}
+#ruler{height:22px;position:relative;font-size:10px;color:var(--sub)}
+#ruler span{position:absolute;top:0;padding-left:4px;border-left:1px solid var(--edge);height:16px;line-height:16px}
+#track{position:relative;height:92px;margin-top:6px;display:flex;background:rgba(0,0,0,.12);border-radius:10px}
+.clip{position:relative;height:100%;flex:none;border:1px solid var(--edge);border-radius:9px;padding:7px 9px;overflow:hidden;
+  font-size:11px;white-space:nowrap;text-overflow:ellipsis;background-color:var(--clipov);background-size:auto 100%;background-repeat:repeat-x;
+  box-shadow:inset 0 1px 0 var(--hi);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+.clip.sel{outline:2px solid #fff;filter:brightness(1.25)}
+.clip small{display:block;margin-top:3px;opacity:.9}
+.clip .tr{position:absolute;top:6px;inset-inline-end:3px;font-style:normal;background:var(--accent2);border-radius:8px;padding:0 5px}
+#ph,#hv{position:absolute;top:0;bottom:0;width:2px;pointer-events:none}
+#ph{background:#fff;box-shadow:0 0 10px var(--accent);z-index:3}
+#hv{background:var(--accent2);display:none;z-index:2}
+#tip{position:absolute;top:0;transform:translateX(-50%);background:var(--glass2);border:1px solid var(--edge);border-radius:8px;padding:0 7px;font-size:10px;white-space:nowrap}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:20}
+.modal.on{display:flex}
+.modal .box{width:min(440px,92vw);max-height:90vh;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:12px;background:var(--glass2)}
+.modal h2{margin:0;font-size:16px}
+#bar{height:10px;border-radius:6px;background:rgba(0,0,0,.25);overflow:hidden;display:none}
+#bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .2s}
+kbd{background:var(--glass2);border:1px solid var(--edge);border-radius:6px;padding:0 6px;font-size:11px;direction:ltr;display:inline-block}
+.sc{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:center}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--glass2);border:1px solid var(--edge);
+  border-radius:14px;padding:8px 16px;display:none;z-index:30;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);max-width:80vw}
+</style>
+</head>
+<body>
+
+<div id="top" class="glass">
+  <div class="logo">✂ RustCut</div>
+  <label>النسبة</label>
+  <select id="ratio" class="field">
+    <option value="16:9">16:9</option><option value="9:16">9:16 (ريلز / تيك توك)</option>
+    <option value="1:1">1:1</option><option value="4:3">4:3</option><option value="21:9">21:9</option>
+  </select>
+  <label>جودة المعاينة</label>
+  <select id="pq" class="field">
+    <option value="orig">أصلية</option><option value="720">720p</option>
+    <option value="480">480p (خفيفة)</option><option value="360">360p (أخف)</option>
+  </select>
+  <button class="btn" id="helpBtn">⌨ المختصرات</button>
+  <button class="btn primary" id="expBtn">⬇ تصدير</button>
+</div>
+
+<div id="main">
+  <div id="lib" class="glass">
+    <div id="tabs">
+      <button data-t="media" class="on">الوسائط</button>
+      <button data-t="fx">التأثيرات</button>
+      <button data-t="tr">الانتقالات</button>
+      <button data-t="txt">النص</button>
+    </div>
+    <div class="pane on" id="p-media">
+      <button class="btn primary" id="imp">＋ استيراد فيديو</button>
+      <div id="pool" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div class="hintp">يمكنك أيضاً سحب الملفات وإفلاتها في النافذة.</div>
+    </div>
+    <div class="pane" id="p-fx">
+      <div class="hintp">اختر مقطعاً من التايملاين ثم اضغط على التأثير.</div>
+      <div class="grid" id="fxgrid"></div>
+    </div>
+    <div class="pane" id="p-tr">
+      <div class="hintp">يُطبَّق الانتقال بين المقطع المحدد والمقطع الذي بعده. يظهر في التصدير النهائي.</div>
+      <div class="grid" id="trgrid"></div>
+      <div class="row"><label>مدة الانتقال <span class="val" id="tdv"></span></label>
+        <input type="range" min="0.2" max="2" step="0.1" data-p="transDur" data-num="1"></div>
+    </div>
+    <div class="pane" id="p-txt">
+      <div class="row"><label>النص على المقطع المحدد</label>
+        <textarea class="field" rows="3" data-p="text" placeholder="اكتب النص هنا…" style="user-select:text"></textarea></div>
+      <div class="row"><label>الحجم</label><input type="range" min="2" max="20" step="0.5" data-p="textSize" data-num="1"></div>
+      <div class="row"><label>الموضع العمودي</label><input type="range" min="5" max="95" data-p="textY" data-num="1"></div>
+      <div class="row h"><label>اللون</label><input type="color" data-p="textColor"></div>
+    </div>
+  </div>
+
+  <div id="stagewrap" class="glass">
+    <div id="empty"><b>ابدأ باستيراد فيديو</b><br>مرّر المؤشر على التايملاين لمعاينة فورية</div>
+    <div id="stage"><div id="frame" dir="ltr">
+      <div id="vids"></div><div id="vig"></div><div id="mb"></div>
+      <div id="mbx"><i id="mh"></i></div><div id="cap"></div>
+    </div></div>
+  </div>
+
+  <div id="side" class="glass">
+    <div class="row"><b id="selname">لا يوجد مقطع محدد</b></div>
+    <h3>السرعة</h3>
+    <div class="row h">
+      <button class="btn" id="slow">−</button>
+      <select class="field" data-p="speed" data-num="1">
+        <option value="0.1">0.1x</option><option value="0.25">0.25x</option><option value="0.5">0.5x</option>
+        <option value="0.75">0.75x</option><option value="1">1x</option><option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option><option value="2">2x</option><option value="3">3x</option>
+        <option value="4">4x</option><option value="8">8x</option></select>
+      <button class="btn" id="fast">+</button>
+    </div>
+    <h3>الصوت</h3>
+    <input type="range" min="0" max="2" step="0.05" data-p="vol" data-num="1">
+    <h3>ضبط الصورة</h3>
+    <div class="row"><label>السطوع</label><input type="range" min="-100" max="100" data-p="fx.brightness" data-num="1"></div>
+    <div class="row"><label>التباين</label><input type="range" min="-100" max="100" data-p="fx.contrast" data-num="1"></div>
+    <div class="row"><label>التشبع</label><input type="range" min="-100" max="100" data-p="fx.saturation" data-num="1"></div>
+    <h3>التمويه (Blur) على كامل المقطع</h3>
+    <input type="range" min="0" max="50" data-p="fx.blur" data-num="1">
+    <label class="row h"><input type="checkbox" data-p="fx.flip" style="width:auto"> مرآة (قلب أفقي)</label>
+    <h3>قناع (Mask) — تمويه جزء محدد</h3>
+    <label class="row h"><input type="checkbox" data-p="mask.on" style="width:auto"> تفعيل القناع</label>
+    <div class="row"><label>الشكل</label>
+      <select class="field" data-p="mask.shape"><option value="rect">مستطيل</option><option value="ellipse">دائرة / بيضاوي</option></select></div>
+    <div class="row"><label>شدة التمويه داخل القناع</label><input type="range" min="1" max="80" data-p="mask.blur" data-num="1"></div>
+    <div class="hintp">اسحب المربع المنقط فوق المعاينة لتحريكه، والنقطة البيضاء لتغيير حجمه.</div>
+    <div class="row h" style="flex-wrap:wrap">
+      <button class="btn" id="split">✂ تقسيم</button>
+      <button class="btn" id="dup">⧉ نسخ</button>
+      <button class="btn" id="del">🗑 حذف</button>
+      <button class="btn" id="rst">↺ تصفير التأثيرات</button>
+    </div>
+  </div>
+</div>
+
+<div id="tl" class="glass">
+  <div id="tbar">
+    <button class="btn" id="undo">↶</button><button class="btn" id="redo">↷</button>
+    <button class="btn primary" id="play">▶ تشغيل</button>
+    <span id="time">00:00.0 / 00:00.0</span>
+    <span style="margin-inline-start:auto" class="val">تكبير</span>
+    <input type="range" id="zoom" min="15" max="400" value="80" style="width:140px">
+  </div>
+  <div id="scroll"><div id="inner">
+    <div id="ruler"></div><div id="track"></div>
+    <div id="ph"></div><div id="hv"><div id="tip">0.0</div></div>
+  </div></div>
+</div>
+
+<div class="modal" id="exp"><div class="box glass">
+  <h2>تصدير الفيديو</h2>
+  <div class="row"><label>الدقة</label>
+    <select id="xres" class="field">
+      <option value="480">480p</option><option value="720">720p HD</option>
+      <option value="1080" selected>1080p Full HD</option><option value="1440">1440p (2K)</option>
+      <option value="2160">2160p (4K)</option></select>
+    <span class="val" id="xdim"></span></div>
+  <div class="row"><label>الإطارات في الثانية</label>
+    <select id="xfps" class="field"><option>24</option><option selected>30</option><option>60</option></select></div>
+  <div class="row"><label>الجودة</label>
+    <select id="xq" class="field">
+      <option value="14">أعلى جودة (حجم كبير)</option><option value="18" selected>عالية</option>
+      <option value="23">متوسطة</option><option value="28">خفيفة (حجم صغير)</option></select></div>
+  <div class="row"><label>الترميز</label>
+    <select id="xcodec" class="field">
+      <option value="h264">H.264 (متوافق مع كل الأجهزة)</option>
+      <option value="h265">H.265 (حجم أصغر)</option>
+      <option value="nvenc">H.264 عبر كرت NVIDIA (أسرع)</option></select></div>
+  <div class="row"><label>سرعة الترميز</label>
+    <select id="xpreset" class="field"><option value="veryfast">سريع</option><option value="medium" selected>متوازن</option><option value="slow">أبطأ وأجود</option></select></div>
+  <div id="bar"><i></i></div>
+  <div class="val" id="xmsg"></div>
+  <div class="row h"><button class="btn primary" id="xgo" style="flex:1">اختيار مكان الحفظ وبدء التصدير</button>
+    <button class="btn" id="xclose">إغلاق</button></div>
+</div></div>
+
+<div class="modal" id="help"><div class="box glass">
+  <h2>مختصرات لوحة المفاتيح</h2>
+  <div class="sc">
+    <span><kbd>Space</kbd></span><span>تشغيل / إيقاف</span>
+    <span><kbd>S</kbd> أو <kbd>Ctrl+B</kbd></span><span>تقسيم المقطع عند المؤشر</span>
+    <span><kbd>+</kbd> أو <kbd>]</kbd></span><span>تسريع المقطع المحدد</span>
+    <span><kbd>-</kbd> أو <kbd>[</kbd></span><span>تبطيء المقطع المحدد</span>
+    <span><kbd>Delete</kbd></span><span>حذف المقطع</span>
+    <span><kbd>Ctrl+D</kbd></span><span>نسخ المقطع</span>
+    <span><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd></span><span>تراجع / إعادة</span>
+    <span><kbd>←</kbd> <kbd>→</kbd></span><span>تقدّم/رجوع إطار واحد</span>
+    <span><kbd>Home</kbd> <kbd>End</kbd></span><span>بداية / نهاية المشروع</span>
+    <span><kbd>F1</kbd></span><span>هذه النافذة</span>
+  </div>
+  <div class="hintp">المختصرات تعمل بغض النظر عن لغة الكيبورد (عربي أو إنكليزي).</div>
+  <button class="btn" id="hclose">إغلاق</button>
+</div></div>
+<div id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const TA = window.__TAURI__;
+const invoke = (c, a) => TA.core.invoke(c, a);
+const asset = p => TA.core.convertFileSrc(p);
+const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const LADDER = [.1, .25, .5, .75, 1, 1.25, 1.5, 2, 3, 4, 8];
+
+const sources = {};
+let clips = [], sel = null, shown = null, playhead = 0, zoom = 80, playing = false, cur = null;
+let sidc = 0, cidc = 0, activeSrc = null, pq = 'orig';
+const undoS = [], redoS = [];
+
+const frame = $('#frame'), vids = $('#vids'), cap = $('#cap'), vig = $('#vig'), mb = $('#mb'), mbx = $('#mbx');
+const inner = $('#inner'), track = $('#track');
+
+const fmt = t => { t = Math.max(0, t); const m = Math.floor(t / 60), s = t % 60; return String(m).padStart(2, '0') + ':' + s.toFixed(1).padStart(4, '0'); };
+const len = c => (c.out - c.in) / c.speed;
+const total = () => clips.reduce((a, c) => a + len(c), 0);
+const accBefore = c => { let a = 0; for (const x of clips) { if (x === c) break; a += len(x); } return a; };
+let toastT;
+function toast(m, ms = 2500) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => t.style.display = 'none', ms); }
+
+/* ---------------- model & history ---------------- */
+const newClip = s => ({
+  id: ++cidc, src: s.sid, name: s.name, thumb: s.thumb, in: 0, out: s.dur, speed: 1, vol: 1,
+  fx: { brightness: 0, contrast: 0, saturation: 0, blur: 0, filter: 'none', flip: false },
+  mask: { on: false, shape: 'rect', x: .3, y: .3, w: .4, h: .3, blur: 25 },
+  trans: 'none', transDur: .5, text: '', textSize: 6, textY: 85, textColor: '#ffffff'
+});
+function snap() { undoS.push(JSON.stringify(clips)); if (undoS.length > 100) undoS.shift(); redoS.length = 0; }
+function restore(json) {
+  const id = sel && sel.id; clips = JSON.parse(json);
+  sel = clips.find(c => c.id === id) || clips[0] || null;
+  playhead = Math.min(playhead, total()); render(); show(playhead);
+}
+function undo() { if (!undoS.length) return; redoS.push(JSON.stringify(clips)); restore(undoS.pop()); }
+function redo() { if (!redoS.length) return; undoS.push(JSON.stringify(clips)); restore(redoS.pop()); }
+
+function locate(t) {
+  let acc = 0;
+  for (let i = 0; i < clips.length; i++) {
+    const c = clips[i], l = len(c);
+    if (t < acc + l || i === clips.length - 1)
+      return { c, i, acc, src: c.in + clamp(t - acc, 0, l) * c.speed };
+    acc += l;
+  }
+  return null;
+}
+
+/* ---------------- importing ---------------- */
+const VEXT = /\.(mp4|mov|mkv|avi|webm|m4v|wmv|flv|ts|mts|m2ts)$/i;
+async function pickFiles() {
+  if (!TA) return toast('شغّل البرنامج المثبّت (وليس من المتصفح)');
+  const r = await TA.dialog.open({ multiple: true, filters: [{ name: 'Video', extensions: ['mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v', 'wmv', 'flv', 'ts', 'mts'] }] });
+  if (r) addPaths(Array.isArray(r) ? r : [r]);
+}
+async function addPaths(paths) { for (const p of paths.filter(p => VEXT.test(p))) await addSource(p); }
+
+async function addSource(path) {
+  const sid = ++sidc, name = path.split(/[\\/]/).pop();
+  const v = document.createElement('video');
+  v.className = 'sv'; v.playsInline = true; v.preload = 'auto'; vids.appendChild(v);
+  const s = { sid, path, name, v, dur: 0, thumb: '', forceProxy: false };
+  sources[sid] = s;
+  const load = src => new Promise((res, rej) => { v.onloadedmetadata = () => res(); v.onerror = () => rej(new Error('load')); v.src = src; });
+  try {
+    try {
+      if (pq !== 'orig') throw 0;
+      await load(asset(path));
+    } catch (_) {
+      toast('جاري تجهيز نسخة المعاينة…', 6000);
+      s.forceProxy = pq === 'orig';
+      const p = await invoke('make_proxy', { path, height: pq === 'orig' ? 720 : +pq });
+      await load(asset(p));
+    }
+    v.onloadedmetadata = v.onerror = null;
+    s.dur = v.duration;
+    try { s.thumb = asset(await invoke('make_thumb', { path })); } catch (_) { }
+    snap();
+    const c = newClip(s); clips.push(c); sel = sel || c;
+    render(); show(playhead);
+  } catch (e) {
+    toast('تعذر فتح الملف: ' + name, 5000);
+    v.remove(); delete sources[sid];
+  }
+}
+
+async function applyQuality() {
+  toast('جاري تغيير جودة المعاينة…', 8000);
+  try {
+    for (const s of Object.values(sources)) {
+      let src;
+      if (pq === 'orig' && !s.forceProxy) src = asset(s.path);
+      else src = asset(await invoke('make_proxy', { path: s.path, height: pq === 'orig' ? 720 : +pq }));
+      if (s.v.src === src) continue;
+      const t = s.v.currentTime;
+      s.v.onloadedmetadata = () => { s.v.currentTime = t; s.v.onloadedmetadata = null; };
+      s.v.src = src;
+    }
+    toast('تم');
+  } catch (e) { toast('فشل: ' + e, 6000); }
+}
+
+/* ---------------- preview ---------------- */
+function setActive(id) {
+  if (activeSrc === id) return;
+  activeSrc = id;
+  for (const k in sources) { const v = sources[k].v; v.style.display = (+k === id) ? 'block' : 'none'; if (+k !== id) v.pause(); }
+}
+function show(t, fast) {
+  const loc = locate(t);
+  $('#empty').style.display = clips.length ? 'none' : 'block';
+  if (!loc) { shown = null; decorate(null); return; }
+  shown = loc.c; setActive(loc.c.src);
+  const v = sources[loc.c.src].v;
+  if (!playing) { if (fast && v.fastSeek) v.fastSeek(loc.src); else v.currentTime = loc.src; }
+  decorate(loc.c);
+}
+function decorate(c) {
+  if (!c) { cap.textContent = ''; vig.style.opacity = 0; mb.style.display = mbx.style.display = 'none'; return; }
+  const v = sources[c.src].v, f = c.fx, fh = frame.clientHeight / 1080;
+  let s = `brightness(${1 + f.brightness / 200}) contrast(${1 + f.contrast / 100}) saturate(${1 + f.saturation / 100})`;
+  if (f.blur > 0) s += ` blur(${f.blur * fh}px)`;
+  s += { bw: ' grayscale(1)', sepia: ' sepia(1)', warm: ' sepia(.3) saturate(1.3)', cool: ' hue-rotate(12deg) saturate(1.1)' }[f.filter] || '';
+  v.style.filter = s; v.style.transform = f.flip ? 'scaleX(-1)' : '';
+  vig.style.opacity = f.filter === 'vignette' ? 1 : 0;
+  cap.textContent = c.text || '';
+  cap.style.fontSize = (c.textSize / 100 * frame.clientHeight) + 'px';
+  cap.style.top = c.textY + '%'; cap.style.color = c.textColor;
+  cap.dir = /[\u0600-\u06FF]/.test(c.text) ? 'rtl' : 'ltr';
+  updMask(c);
+}
+function updMask(c) {
+  const m = c && c.mask;
+  if (!m || !m.on) { mb.style.display = mbx.style.display = 'none'; return; }
+  const pos = { left: m.x * 100 + '%', top: m.y * 100 + '%', width: m.w * 100 + '%', height: m.h * 100 + '%' };
+  Object.assign(mb.style, pos, { display: 'block', borderRadius: m.shape === 'ellipse' ? '50%' : '0' });
+  const b = `blur(${m.blur * frame.clientHeight / 1080}px)`;
+  mb.style.backdropFilter = mb.style.webkitBackdropFilter = b;
+  Object.assign(mbx.style, pos, { display: (c === sel && !playing) ? 'block' : 'none', borderRadius: m.shape === 'ellipse' ? '50%' : '0' });
+}
+function fit() {
+  const [a, b] = $('#ratio').value.split(':').map(Number), st = $('#stage');
+  let w = st.clientWidth, h = w * b / a;
+  if (h > st.clientHeight) { h = st.clientHeight; w = h * a / b; }
+  frame.style.width = w + 'px'; frame.style.height = h + 'px';
+  decorate(shown);
+}
+
+/* mask drag / resize directly on the preview */
+let drag = null;
+mbx.addEventListener('pointerdown', e => {
+  if (!shown || shown !== sel) return;
+  snap();
+  drag = { mode: e.target === $('#mh') ? 'size' : 'move', sx: e.clientX, sy: e.clientY, o: { ...sel.mask }, r: frame.getBoundingClientRect(), c: sel };
+  mbx.setPointerCapture(e.pointerId); e.preventDefault();
+});
+mbx.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const dx = (e.clientX - drag.sx) / drag.r.width, dy = (e.clientY - drag.sy) / drag.r.height, m = drag.c.mask, o = drag.o;
+  if (drag.mode === 'move') { m.x = clamp(o.x + dx, 0, 1 - o.w); m.y = clamp(o.y + dy, 0, 1 - o.h); }
+  else { m.w = clamp(o.w + dx, .05, 1 - o.x); m.h = clamp(o.h + dy, .05, 1 - o.y); }
+  updMask(drag.c);
+});
+mbx.addEventListener('pointerup', () => drag = null);
+
+/* ---------------- timeline ---------------- */
+function render() {
+  const T = total();
+  inner.style.width = Math.max(T * zoom + 300, $('#scroll').clientWidth) + 'px';
+  const step = zoom >= 150 ? 1 : zoom >= 60 ? 2 : zoom >= 30 ? 5 : 10;
+  let r = '';
+  for (let s = 0; s <= Math.ceil(T) + 3; s += step) r += `<span style="left:${s * zoom}px">${s}s</span>`;
+  $('#ruler').innerHTML = r;
+  track.innerHTML = '';
+  clips.forEach((c, i) => {
+    const d = document.createElement('div');
+    d.className = 'clip' + (c === sel ? ' sel' : '');
+    d.style.width = len(c) * zoom + 'px';
+    if (c.thumb) d.style.backgroundImage = `linear-gradient(var(--clipov),var(--clipov)),url("${c.thumb}")`;
+    const tags = [c.text ? 'T' : '', c.mask.on ? '◧' : '', (c.fx.filter !== 'none' || c.fx.blur) ? 'fx' : ''].filter(Boolean).join(' ');
+    d.innerHTML = `<b>${esc(c.name)}</b><small>${fmt(len(c))} · ${c.speed}x ${tags}</small>`;
+    if (i < clips.length - 1 && c.trans !== 'none') d.insertAdjacentHTML('beforeend', '<i class="tr">⇄</i>');
+    track.appendChild(d);
+  });
+  updHead(); refreshUI(); renderPool();
+}
+function updHead() { $('#ph').style.left = playhead * zoom + 'px'; $('#time').textContent = fmt(playhead) + ' / ' + fmt(total()); }
+function renderPool() {
+  const p = $('#pool'); p.innerHTML = '';
+  Object.values(sources).forEach(s => {
+    const d = document.createElement('div'); d.className = 'card';
+    d.innerHTML = `${s.thumb ? `<img src="${s.thumb}">` : '<div class="ph"></div>'}<div class="nm">${esc(s.name)}<div class="val">${fmt(s.dur)}</div></div><button class="btn">＋</button>`;
+    d.querySelector('button').onclick = () => { snap(); clips.push(newClip(s)); sel = sel || clips[clips.length - 1]; render(); show(playhead); };
+    p.appendChild(d);
+  });
+}
+const timeAt = e => clamp((e.clientX - inner.getBoundingClientRect().left) / zoom, 0, total());
+inner.addEventListener('mousemove', e => {            // hover preview
+  if (playing || !clips.length) return;
+  const t = timeAt(e);
+  $('#hv').style.display = 'block'; $('#hv').style.left = t * zoom + 'px'; $('#tip').textContent = fmt(t);
+  show(t, true);
+});
+inner.addEventListener('mouseleave', () => { $('#hv').style.display = 'none'; if (!playing) show(playhead); });
+inner.addEventListener('click', e => {
+  if (!clips.length) return;
+  const was = playing; if (was) pause();
+  playhead = timeAt(e); sel = locate(playhead).c;
+  show(playhead); render(); if (was) play();
+});
+
+/* ---------------- playback ---------------- */
+function startClip(c, from) {
+  setActive(c.src);
+  const v = sources[c.src].v;
+  v.currentTime = from; v.playbackRate = c.speed; v.volume = clamp(c.vol, 0, 1); cur = c.id; v.play();
+  shown = c; decorate(c);
+}
+function play() {
+  if (!clips.length) return;
+  if (playhead >= total() - 0.05) playhead = 0;
+  const loc = locate(playhead);
+  playing = true; $('#play').textContent = '⏸ إيقاف'; $('#hv').style.display = 'none';
+  startClip(loc.c, loc.src); requestAnimationFrame(loop);
+}
+function pause() { playing = false; $('#play').textContent = '▶ تشغيل'; for (const k in sources) sources[k].v.pause(); decorate(shown); }
+const togglePlay = () => playing ? pause() : play();
+function loop() {
+  if (!playing) return;
+  const c = clips.find(x => x.id === cur);
+  if (!c) { pause(); return; }
+  const v = sources[c.src].v;
+  if (v.currentTime >= c.out - 0.04 || v.ended) {
+    const i = clips.indexOf(c); v.pause();
+    if (i < clips.length - 1) { const n = clips[i + 1]; sel = n; startClip(n, n.in); render(); }
+    else { playhead = total(); pause(); updHead(); return; }
+  } else { playhead = accBefore(c) + (v.currentTime - c.in) / c.speed; }
+  updHead(); requestAnimationFrame(loop);
+}
+
+/* ---------------- editing ---------------- */
+function split() {
+  if (!clips.length) return;
+  const loc = locate(playhead), c = loc.c, s = loc.src;
+  if (s - c.in < .1 || c.out - s < .1) return toast('ضع المؤشر داخل المقطع بعيداً عن الحواف');
+  snap();
+  const b = JSON.parse(JSON.stringify(c)); b.id = ++cidc; b.in = s; b.trans = c.trans; b.text = c.text;
+  c.out = s; c.trans = 'none';
+  clips.splice(loc.i + 1, 0, b); sel = b; render();
+}
+function dup() { if (!sel) return; snap(); const b = JSON.parse(JSON.stringify(sel)); b.id = ++cidc; clips.splice(clips.indexOf(sel) + 1, 0, b); sel = b; render(); }
+function del() {
+  if (!sel) return; snap();
+  const i = clips.indexOf(sel); clips.splice(i, 1);
+  sel = clips[Math.min(i, clips.length - 1)] || null;
+  playhead = Math.min(playhead, total()); render(); show(playhead);
+}
+function bump(dir) {
+  if (!sel) return;
+  let j = LADDER.reduce((b, x, i) => Math.abs(x - sel.speed) < Math.abs(LADDER[b] - sel.speed) ? i : b, 0);
+  j = clamp(j + dir, 0, LADDER.length - 1);
+  snap(); sel.speed = LADDER[j]; afterEdit('speed'); toast('السرعة ' + sel.speed + 'x', 900);
+}
+function resetFx() { if (!sel) return; snap(); sel.fx = newClip({ sid: 0, name: '', dur: 0 }).fx; sel.mask.on = false; render(); decorate(shown); }
+
+/* generic bindings for all inspector / library controls */
+const getP = (o, p) => p.split('.').reduce((a, k) => a && a[k], o);
+const setP = (o, p, v) => { const k = p.split('.'), l = k.pop(); k.reduce((a, x) => a[x], o)[l] = v; };
+function afterEdit(p) {
+  if (playing && sel && cur === sel.id) sources[sel.src].v.playbackRate = sel.speed;
+  render(); decorate(shown);
+}
+$$('[data-p]').forEach(el => {
+  const instant = el.type === 'checkbox' || el.tagName === 'SELECT';
+  if (el.type === 'range') { el.addEventListener('pointerdown', snap); el.addEventListener('pointerup', () => el.blur()); }
+  else if (!instant) el.addEventListener('focus', snap);
+  el.addEventListener(instant ? 'change' : 'input', () => {
+    if (!sel) return;
+    if (instant) snap();
+    const v = el.type === 'checkbox' ? el.checked : (el.dataset.num ? +el.value : el.value);
+    setP(sel, el.dataset.p, v); afterEdit(el.dataset.p);
+  });
+});
+function refreshUI() {
+  $('#selname').textContent = sel ? sel.name : 'لا يوجد مقطع محدد';
+  $$('[data-p]').forEach(el => {
+    el.disabled = !sel; if (!sel) return;
+    const v = getP(sel, el.dataset.p);
+    if (el.type === 'checkbox') el.checked = !!v; else if (String(v) !== el.value) el.value = v;
+  });
+  ['slow', 'fast', 'split', 'dup', 'del', 'rst'].forEach(i => $('#' + i).disabled = !sel);
+  $('#tdv').textContent = sel ? sel.transDur.toFixed(1) + 's' : '';
+  $$('#fxgrid .tile').forEach(t => t.classList.toggle('on', !!sel && (sel.fx.filter === t.dataset.k)));
+  $$('#trgrid .tile').forEach(t => t.classList.toggle('on', !!sel && sel.trans === t.dataset.k));
+}
+
+/* libraries: effects & transitions */
+const FX = [['none', 'بدون', '⭕'], ['bw', 'أبيض وأسود', '⚫'], ['sepia', 'قديم', '📜'], ['warm', 'دافئ', '🔥'], ['cool', 'بارد', '❄️'], ['vignette', 'تظليل الحواف', '◐'], ['sharpen', 'حدّة', '🔺']];
+const TR = [['none', 'بدون', '—'], ['fade', 'تلاشي', '🌫️'], ['dissolve', 'ذوبان', '💧'], ['fadeblack', 'تلاشي للأسود', '⬛'], ['wipeleft', 'مسح يسار', '◀'], ['wiperight', 'مسح يمين', '▶'],
+['slideleft', 'انزلاق يسار', '⏪'], ['slideright', 'انزلاق يمين', '⏩'], ['circleopen', 'دائرة تفتح', '⭕'], ['circleclose', 'دائرة تغلق', '🔘'], ['pixelize', 'بكسلة', '🔳'],
+['radial', 'دوران', '🌀'], ['zoomin', 'تقريب', '🔍'], ['smoothleft', 'نعومة', '〰️']];
+function buildGrid(el, list, apply) {
+  el.innerHTML = list.map(([k, n, i]) => `<div class="tile" data-k="${k}"><span>${i}</span>${n}</div>`).join('');
+  el.querySelectorAll('.tile').forEach(t => t.onclick = () => { if (!sel) return toast('اختر مقطعاً أولاً'); snap(); apply(t.dataset.k); render(); decorate(shown); });
+}
+buildGrid($('#fxgrid'), FX, k => sel.fx.filter = k);
+buildGrid($('#trgrid'), TR, k => { sel.trans = k; if (k !== 'none' && clips.indexOf(sel) === clips.length - 1) toast('الانتقال يُطبَّق بين هذا المقطع والذي بعده'); });
+$$('#tabs button').forEach(b => b.onclick = () => {
+  $$('#tabs button').forEach(x => x.classList.toggle('on', x === b));
+  $$('.pane').forEach(p => p.classList.toggle('on', p.id === 'p-' + b.dataset.t));
+});
+
+/* ---------------- export ---------------- */
+const dims = short => {
+  const [a, b] = $('#ratio').value.split(':').map(Number), ev = x => Math.round(x / 2) * 2;
+  return a >= b ? { W: ev(short * a / b), H: short } : { W: short, H: ev(short * b / a) };
+};
+function textPng(c, W, H) {
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const x = cv.getContext('2d'), fs = c.textSize / 100 * H;
+  x.font = `700 ${fs}px "Segoe UI","Noto Sans Arabic",Tahoma,sans-serif`;
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.direction = /[\u0600-\u06FF]/.test(c.text) ? 'rtl' : 'ltr';
+  x.lineJoin = 'round'; x.lineWidth = fs * .14; x.strokeStyle = 'rgba(0,0,0,.9)'; x.fillStyle = c.textColor;
+  const lines = c.text.split('\n');
+  lines.forEach((ln, i) => { const y = c.textY / 100 * H + (i - (lines.length - 1) / 2) * fs * 1.25; x.strokeText(ln, W / 2, y); x.fillText(ln, W / 2, y); });
+  return cv.toDataURL('image/png');
+}
+const showDims = () => { const d = dims(+$('#xres').value); $('#xdim').textContent = d.W + ' × ' + d.H; };
+$('#xres').onchange = showDims;
+$('#expBtn').onclick = () => { if (!clips.length) return toast('أضف فيديو أولاً'); pause(); showDims(); $('#xmsg').textContent = ''; $('#exp').classList.add('on'); };
+$('#xclose').onclick = () => $('#exp').classList.remove('on');
+$('#xgo').onclick = async () => {
+  const out = await TA.dialog.save({ filters: [{ name: 'MP4', extensions: ['mp4'] }], defaultPath: 'video.mp4' });
+  if (!out) return;
+  const { W, H } = dims(+$('#xres').value);
+  const job = {
+    clips: clips.map(c => ({
+      path: sources[c.src].path, inn: c.in, out: c.out, speed: c.speed, volume: c.vol, fx: c.fx, mask: c.mask,
+      trans: c.trans, transDur: c.transDur, textPng: c.text ? textPng(c, W, H) : null
+    })),
+    width: W, height: H, fps: +$('#xfps').value, crf: +$('#xq').value,
+    codec: $('#xcodec').value, preset: $('#xpreset').value, output: out
+  };
+  $('#xgo').disabled = true; $('#bar').style.display = 'block'; $('#bar i').style.width = '0';
+  $('#xmsg').textContent = 'جاري التصدير… لا تغلق البرنامج';
+  try {
+    await invoke('export_video', { job });
+    $('#xmsg').textContent = '✔ تم التصدير: ' + out;
+  } catch (e) { $('#xmsg').textContent = '✖ فشل التصدير:\n' + e; $('#xmsg').style.whiteSpace = 'pre-wrap'; }
+  $('#xgo').disabled = false;
+};
+
+/* ---------------- wiring ---------------- */
+$('#imp').onclick = pickFiles;
+$('#play').onclick = togglePlay;
+$('#split').onclick = split; $('#dup').onclick = dup; $('#del').onclick = del; $('#rst').onclick = resetFx;
+$('#slow').onclick = () => bump(-1); $('#fast').onclick = () => bump(1);
+$('#undo').onclick = undo; $('#redo').onclick = redo;
+$('#zoom').oninput = e => { zoom = +e.target.value; render(); };
+$('#ratio').onchange = fit;
+$('#pq').onchange = e => { pq = e.target.value; applyQuality(); };
+$('#helpBtn').onclick = () => $('#help').classList.add('on');
+$('#hclose').onclick = () => $('#help').classList.remove('on');
+
+addEventListener('keydown', e => {
+  const t = e.target;
+  if (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && t.type === 'text')) return;
+  const ctrl = e.ctrlKey || e.metaKey, c = e.code;      // e.code is layout-independent (works with Arabic keyboard)
+  if (ctrl) {
+    if (c === 'KeyZ') { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+    else if (c === 'KeyY') { e.preventDefault(); redo(); }
+    else if (c === 'KeyB') { e.preventDefault(); split(); }
+    else if (c === 'KeyD') { e.preventDefault(); dup(); }
+    return;
+  }
+  if (c === 'Space') { e.preventDefault(); togglePlay(); }
+  else if (c === 'KeyS') split();
+  else if (c === 'Equal' || c === 'NumpadAdd' || c === 'BracketRight') bump(1);
+  else if (c === 'Minus' || c === 'NumpadSubtract' || c === 'BracketLeft') bump(-1);
+  else if (c === 'Delete') del();
+  else if (c === 'ArrowLeft' || c === 'ArrowRight') { e.preventDefault(); pause(); playhead = clamp(playhead + (c === 'ArrowRight' ? 1 : -1) / 30, 0, total()); show(playhead); updHead(); }
+  else if (c === 'Home') { pause(); playhead = 0; show(0); updHead(); }
+  else if (c === 'End') { pause(); playhead = total(); show(playhead); updHead(); }
+  else if (c === 'F1') { e.preventDefault(); $('#help').classList.add('on'); }
+  else if (c === 'Escape') { $('#help').classList.remove('on'); $('#exp').classList.remove('on'); }
+});
+addEventListener('resize', () => { fit(); render(); });
+if (TA) {
+  try { TA.webview.getCurrentWebview().onDragDropEvent(e => { if (e.payload.type === 'drop') addPaths(e.payload.paths); }); } catch (_) { }
+  try { TA.event.listen('export-progress', e => { $('#bar i').style.width = e.payload.toFixed(1) + '%'; }); } catch (_) { }
+  invoke('ffmpeg_ok').then(ok => { if (!ok) toast('⚠ لم يتم العثور على ffmpeg، لن يعمل التصدير والمعاينة المصغّرة', 9000); });
+}
+fit(); render();
+</script>
+</body>
+</html>
